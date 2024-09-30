@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simpele Stopwatch met Uurloon</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+            background-color: white; /* Achtergrondkleur van de pagina */
+        }
+        #stopwatch-container {
+            display: inline-block;
+            padding: 20px;
+            border: 3px solid #000;
+            border-radius: 10px;
+            background-color: Blue; /* Achtergrondkleur van de stopwatch */
+            color: white; /* Kleur van de tekst in de stopwatch */
+Width: 400px;
+        }
+        #time {
+            font-size: 56px; /* Grotere tekstgrootte voor tijd */
+            margin-bottom: 20px;
+        }
+        #euro {
+            font-size: 80px; /* Grotere tekstgrootte voor verdiend bedrag */
+            margin-bottom: 20px;
+        }
+        #hourly-rate-display {
+            font-size: 22px; /* Kleinere tekstgrootte voor uurloon */
+            margin-bottom: 10px; /* Ruimte tussen uurloon en knoppen */
+        }
+        button, input {
+            font-size: 20px;
+            padding: 10px;
+            margin: 5px;
+            cursor: pointer;
+            width: 90px;
+            background-color: red; /* Lichtere achtergrondkleur voor knoppen */
+            border: 1px solid #000;
+            border-radius: 3px;
+        }
+        button:hover {
+            background-color: #c0c0c0; /* Lichtere kleur bij hover */
+        }
+        input {
+            width: 63px;
+            height: 15px; /* Hoogte van het invoerveld */
+            text-align: center;
+            background-color: #fff; /* Witte achtergrond voor invoerveld */
+            border: 1px solid #000;
+            border-radius: 0;
+            -moz-appearance: textfield; /* Verberg pijltjes in Firefox */
+        }
+        input::-webkit-outer-spin-button, 
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none; /* Verberg pijltjes in Chrome */
+        }
+        #popup {
+            display: none; /* Standaard verborgen */
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px;
+            border: 3px solid #000;
+            border-radius: 10px;
+            background-color: blue; /* Achtergrondkleur van de popup */
+            color: white; /* Kleur van de tekst in de popup */
+            z-index: 1000;
+        }
+        #popup button {
+            width: 120px; /* Breder voor bevestigen */
+background-color: green;
+        }
+        #overlay {
+            display: none; /* Standaard verborgen */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparante achtergrond */
+            z-index: 999;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="overlay"></div>
+
+    <div id="popup">
+        <div>
+            <span>Vul uurloon in:</span>
+            <input type="text" id="hourly-rate" placeholder="0,00" maxlength="5">
+        </div>
+        <button id="confirm">Start</button>
+    </div>
+
+    <div id="stopwatch-container" class="hidden">
+        <div id="time" class="hidden">00:00:00</div>
+        <div id="euro" class="hidden">€0,00</div>
+        <div id="hourly-rate-display" class="hidden">Uurloon: €0,00</div> <!-- Uurloon weergegeven -->
+        <button id="reset" class="hidden">Reset</button> <!-- Resetknop is ook standaard verborgen -->
+    </div>
+
+    <script>
+        let timer;
+        let isRunning = false;
+        let startTime = 0;
+        let elapsedTime = 0;
+        let hourlyRate = 0;
+
+        function updateTime() {
+            const currentTime = Date.now();
+            const timePassed = currentTime - startTime + elapsedTime;
+            const seconds = Math.floor((timePassed / 1000) % 60);
+            const minutes = Math.floor((timePassed / (1000 * 60)) % 60);
+            const hours = Math.floor((timePassed / (1000 * 60 * 60)) % 24);
+            
+            document.getElementById("time").textContent = 
+                String(hours).padStart(2, '0') + ":" + 
+                String(minutes).padStart(2, '0') + ":" + 
+                String(seconds).padStart(2, '0');
+        }
+
+        function updateEarned() {
+            const currentTime = Date.now();
+            const timePassed = currentTime - startTime + elapsedTime;
+            let totalHours = timePassed / (1000 * 60 * 60); // Tijd in uren
+            let earned = totalHours * hourlyRate; // Verdiend bedrag
+
+            // Zet de verdiende bedrag in het juiste formaat
+            document.getElementById("euro").textContent = "€" + earned.toFixed(2).replace('.', ',');
+        }
+
+        // Wanneer de bevestigen knop in de pop-up wordt ingedrukt
+        document.getElementById("confirm").addEventListener("click", () => {
+            hourlyRate = parseFloat(document.getElementById("hourly-rate").value.replace(',', '.')) || 0;
+
+            if (hourlyRate <= 0) {
+                alert("Voer een geldig uurloon in!"); // Waarschuwing als uurloon niet geldig is
+                return; // Geen actie als het uurloon 0 is
+            }
+
+            document.getElementById("hourly-rate-display").textContent = `Uurloon: €${hourlyRate.toFixed(2).replace('.', ',')}`; // Update label met uurloon
+            document.getElementById("hourly-rate-display").classList.remove("hidden"); // Maak het uurloon zichtbaar
+            
+            // Toon de stopwatch
+            document.getElementById("overlay").style.display = "none"; // Verberg overlay
+            document.getElementById("popup").style.display = "none"; // Verberg pop-up
+            document.getElementById("stopwatch-container").classList.remove("hidden"); // Maak de stopwatch zichtbaar
+            document.getElementById("time").classList.remove("hidden"); // Maak de timer zichtbaar
+            document.getElementById("euro").classList.remove("hidden"); // Maak het verdiende bedrag zichtbaar
+            
+            // Start de timer
+            startTime = Date.now();
+            timer = setInterval(() => {
+                updateTime();
+                updateEarned(); // Bijwerk verdiend bedrag 5x per seconde
+            }, 200); // Timer elke 210ms bijwerken (5x per seconde)
+        });
+
+        // Wanneer de resetknop wordt ingedrukt
+        document.getElementById("reset").addEventListener("click", () => {
+            clearInterval(timer);
+            isRunning = false;
+            elapsedTime = 0;
+
+            document.getElementById("time").textContent = "00:00:00";
+            document.getElementById("euro").textContent = "€0,00"; // Reset verdiend bedrag naar €0,00
+
+            // Reset invoerveld en maak het weer zichtbaar
+            document.getElementById("hourly-rate").value = ""; // Maak het invoerveld leeg
+            document.getElementById("hourly-rate").style.display = "block"; // Maak invoerveld zichtbaar
+
+            // Verberg stopwatch en toon alleen de pop-up
+            document.getElementById("overlay").style.display = "block"; // Toon overlay
+            document.getElementById("popup").style.display = "block"; // Toon pop-up
+            document.getElementById("stopwatch-container").classList.add("hidden"); // Verberg stopwatch
+            document.getElementById("hourly-rate-display").classList.add("hidden"); // Verberg uurloon label
+        });
+
+        // Toont de pop-up bij het laden van de pagina
+        window.onload = function() {
+            document.getElementById("overlay").style.display = "block"; // Toon overlay
+            document.getElementById("popup").style.display = "block"; // Toon pop-up
+        };
+
+        // Zorg ervoor dat de pop-up niet kan worden gesloten door op de achtergrond te klikken
+        document.getElementById("overlay").addEventListener("click", (event) => {
+            if (event.target === document.getElementById("overlay")) {
+                event.stopPropagation(); // Voorkom dat het klikken op de overlay andere gebeurtenissen activeert
+            }
+        });
+    </script>
+
+</body>
+</html>
